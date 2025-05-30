@@ -51,6 +51,9 @@ actor_rollout_ref:
     loss_factor: null
     k_percent: 0.2
     ppo_kl_coef: 1
+    clip_cov_ratio: 0.0002
+    clip_cov_lb: 1.0
+    clip_cov_ub: 5.0
     entropy_coeff: 0
     use_kl_loss: False # True for GRPO
     use_torch_compile: True # False to disable torch compile
