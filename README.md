@@ -15,6 +15,7 @@
   <p>
     <a href="#🎈citation" style="text-decoration: none; font-weight: bold;">🎈 Citation</a> •
     <a href="#🌻acknowledgement" style="text-decoration: none; font-weight: bold;">🌻 Acknowledgement</a> •
+    <a href="#📬Contact" style="text-decoration: none; font-weight: bold;">📬 Contact</a> •
     <a href="#📈star-history" style="text-decoration: none; font-weight: bold;">📈 Star History</a>
   </p>
 </div>
@@ -112,6 +113,14 @@ If you find this paper or repo helpful, please cite us.
 ```
 # 🌻Acknowledgement
 We implement our reinforcement learning algorithm extending from [veRL](https://github.com/volcengine/verl). We utilize [vLLM](https://github.com/vllm-project/vllm) for inference. Our models are trained primarily on [Qwen2.5 family](https://github.com/QwenLM/Qwen2.5). Our training data is built from [DAPO-MATH](https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k). Thanks for their great contributions!
+
+# 📬 Contact
+
+For questions, discussion, or collaboration opportunities, feel free to contact:
+- Ganqu Cui: cgq22@mails.tsinghua.edu.cn
+- Yuchen Zhang: yuchen.zhang2003@gmail.com
+- Jiacheng Chen: jackchan9345@gmail.com
+- Ning Ding: ningding.cs@gmail.com
 
 # 📈Star History
 
