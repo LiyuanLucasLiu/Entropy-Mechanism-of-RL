@@ -101,14 +101,11 @@ Our two approaches both achieve non-trivial improvements across all benchmarks. 
 If you find this paper or repo helpful, please cite us.
 
 ```bibtex
-@misc{cui2025entropymechanismreinforcementlearning,
-      title={The Entropy Mechanism of Reinforcement Learning for Reasoning Language Models}, 
-      author={Ganqu Cui and Yuchen Zhang and Jiacheng Chen and Lifan Yuan and Zhi Wang and Yuxin Zuo and Haozhan Li and Yuchen Fan and Huayu Chen and Weize Chen and Zhiyuan Liu and Hao Peng and Lei Bai and Wanli Ouyang and Yu Cheng and Bowen Zhou and Ning Ding},
-      year={2025},
-      eprint={2505.22617},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2505.22617}, 
+@article{cui2025entropy,
+  title={The Entropy Mechanism of Reinforcement Learning for Reasoning Language Models},
+  author={Cui, Ganqu and Zhang, Yuchen and Chen, Jiacheng and Yuan, Lifan and Wang, Zhi and Zuo, Yuxin and Li, Haozhan and Fan, Yuchen and Chen, Huayu and Chen, Weize and others},
+  journal={arXiv preprint arXiv:2505.22617},
+  year={2025}
 }
 ```
 # 🌻Acknowledgement
