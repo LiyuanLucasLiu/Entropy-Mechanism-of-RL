@@ -117,7 +117,7 @@ We implement our reinforcement learning algorithm extending from [veRL](https://
 # 📬 Contact
 
 For questions, discussion, or collaboration opportunities, feel free to contact:
-- Ganqu Cui: cgq22@mails.tsinghua.edu.cn
+- Ganqu Cui: cuiganqu@pjlab.org.cn
 - Yuchen Zhang: yuchen.zhang2003@gmail.com
 - Jiacheng Chen: jackchan9345@gmail.com
 - Ning Ding: ningding.cs@gmail.com
