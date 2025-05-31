@@ -466,6 +466,57 @@ def compute_policy_loss_kl_cov(
 
     return pg_loss, torch.tensor(0.), ppo_kl_abs
 
+def compute_policy_loss_clip_cov(
+    old_log_prob,
+    log_prob,
+    advantages,
+    response_mask,
+    cliprange=None,
+    cliprange_low=None,
+    cliprange_high=None,
+    loss_agg_mode="token-mean",
+    clip_ratio=0.0002,
+    clip_cov_lb=1.0,
+    clip_cov_ub=5.0,
+):
+    negative_approx_kl = log_prob - old_log_prob
+    ratio = torch.exp(negative_approx_kl)
+    ppo_kl = verl_F.masked_mean(-negative_approx_kl, response_mask)
+
+    pg_losses1 = -advantages * ratio
+    
+    if cliprange_low is None:
+        cliprange_low = cliprange
+    if cliprange_high is None:
+        cliprange_high = cliprange
+    
+    corr = torch.ones_like(advantages)
+    pg_losses2 = -advantages * torch.clamp(ratio, 1 - cliprange_low, 1 + cliprange_high)
+    clip_by_origin = (pg_losses2 > pg_losses1) & (response_mask > 0)
+    
+    cov_all = (advantages- verl_F.masked_mean(advantages, response_mask)) * (log_prob- verl_F.masked_mean(log_prob.detach(), response_mask))
+    cov_all[response_mask == 0] = -torch.inf
+    cov_all[clip_by_origin] = -torch.inf
+    
+    clip_num = max(int(clip_ratio * response_mask.sum().item()), 1)
+    top_k_idx = (cov_all < clip_cov_ub) & (cov_all > clip_cov_lb) & (response_mask > 0)
+    top_k_idx = torch.nonzero(top_k_idx)
+    
+    if len(top_k_idx) > 0:
+        perm = torch.randperm(len(top_k_idx))
+        top_k_idx = top_k_idx[perm[:min(clip_num, len(top_k_idx))]]
+    else:
+        top_k_idx = torch.empty((0, 2), device=cov_all.device, dtype=torch.long)
+    
+    corr[top_k_idx[:, 0], top_k_idx[:, 1]] = 0
+    
+    pg_clipfrac = verl_F.masked_mean((corr==0).float(), response_mask)
+
+    pg_losses = torch.maximum(pg_losses1, pg_losses2) * corr
+    pg_loss = agg_loss(loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+
+    return pg_loss, pg_clipfrac, ppo_kl
+
 def compute_entropy_loss(logits, response_mask):
     """Compute Categorical entropy loss
 

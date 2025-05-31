@@ -4,8 +4,8 @@ set -xeuo pipefail
 export WANDB_API_KEY=YOUR_WANDB_API_KEY
 # export VLLM_USE_V1=1
 
-project_name='Qwen2.5-32B'
-exp_name='klcov'
+project_name='Qwen2.5-7B'
+exp_name='clipcov'
 
 adv_estimator=grpo
 
@@ -14,8 +14,11 @@ kl_coef=0.0
 use_kl_loss=False
 kl_loss_coef=0.0
 
-clip_ratio_low=0.2
-clip_ratio_high=0.2
+clip_ratio_low=1
+clip_ratio_high=1
+clip_cov_ratio=0.0002
+clip_cov_lb=1.0
+clip_cov_ub=5.0
 
 max_prompt_length=$((1024 * 2))
 max_response_length=$((1024 * 8))
@@ -24,13 +27,13 @@ overlong_buffer_len=$((1024 * 2))
 overlong_penalty_factor=1.0
 
 loss_agg_mode="token-mean"
-loss_mode="kl_cov"
+loss_mode="clip_cov"
 enable_filter_groups=False
 filter_groups_metric=acc
 max_num_gen_batches=10
 train_prompt_bsz=256
 gen_prompt_bsz=$((train_prompt_bsz * 3))
-train_prompt_mini_bsz=64  # We found that set update bsz as 64 can sometimes achieve better performance, but it may not be stable. 
+train_prompt_mini_bsz=256
 n_resp_per_prompt=8
 max_token=20480
 
@@ -51,7 +54,7 @@ temperature=1.0
 top_p=1.0
 top_k=-1 # 0 for HF rollout, -1 for vLLM rollout
 ppo_kl_coef=1
-k_percent=0.02
+k_percent=0.2
 
 # Mathematically equivalent
 use_dynamic_bsz=True
@@ -79,6 +82,9 @@ HYDRA_FULL_ERROR=1 python -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.loss_mode=${loss_mode} \
     actor_rollout_ref.actor.k_percent=${k_percent} \
     actor_rollout_ref.actor.ppo_kl_coef=${ppo_kl_coef} \
+    actor_rollout_ref.actor.clip_cov_ratio=${clip_cov_ratio} \
+    actor_rollout_ref.actor.clip_cov_lb=${clip_cov_lb} \
+    actor_rollout_ref.actor.clip_cov_ub=${clip_cov_ub} \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=8 \
     actor_rollout_ref.rollout.mode=sync \
     algorithm.adv_estimator=${adv_estimator} \

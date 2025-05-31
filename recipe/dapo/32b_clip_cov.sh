@@ -5,7 +5,7 @@ export WANDB_API_KEY=YOUR_WANDB_API_KEY
 # export VLLM_USE_V1=1
 
 project_name='Qwen2.5-32B'
-exp_name='klcov'
+exp_name='clipcov'
 
 adv_estimator=grpo
 
@@ -14,8 +14,11 @@ kl_coef=0.0
 use_kl_loss=False
 kl_loss_coef=0.0
 
-clip_ratio_low=0.2
-clip_ratio_high=0.2
+clip_ratio_low=1
+clip_ratio_high=1
+clip_cov_ratio=0.0002
+clip_cov_lb=1.0
+clip_cov_ub=5.0
 
 max_prompt_length=$((1024 * 2))
 max_response_length=$((1024 * 8))
@@ -24,13 +27,13 @@ overlong_buffer_len=$((1024 * 2))
 overlong_penalty_factor=1.0
 
 loss_agg_mode="token-mean"
-loss_mode="kl_cov"
+loss_mode="clip_cov"
 enable_filter_groups=False
 filter_groups_metric=acc
 max_num_gen_batches=10
 train_prompt_bsz=256
 gen_prompt_bsz=$((train_prompt_bsz * 3))
-train_prompt_mini_bsz=64  # We found that set update bsz as 64 can sometimes achieve better performance, but it may not be stable. 
+train_prompt_mini_bsz=256
 n_resp_per_prompt=8
 max_token=20480
 
@@ -107,6 +110,9 @@ HYDRA_FULL_ERROR=1 python -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.grad_clip=1.0 \
     actor_rollout_ref.actor.loss_agg_mode=${loss_agg_mode} \
     actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \
+    actor_rollout_ref.actor.clip_cov_ratio=${clip_cov_ratio} \
+    actor_rollout_ref.actor.clip_cov_lb=${clip_cov_lb} \
+    actor_rollout_ref.actor.clip_cov_ub=${clip_cov_ub} \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.85 \
     actor_rollout_ref.rollout.log_prob_micro_batch_size=${infer_micro_batch_size} \
     actor_rollout_ref.rollout.tensor_model_parallel_size=2 \

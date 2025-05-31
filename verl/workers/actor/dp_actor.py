@@ -29,7 +29,7 @@ from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
 import verl.utils.torch_functional as verl_F
 from verl import DataProto
-from verl.trainer.ppo.core_algos import agg_loss, compute_policy_loss, kl_penalty, compute_policy_loss_kl_cov
+from verl.trainer.ppo.core_algos import agg_loss, compute_policy_loss, kl_penalty, compute_policy_loss_kl_cov, compute_policy_loss_clip_cov
 from verl.utils.debug import GPUMemoryLogger
 from verl.utils.fsdp_utils import FSDPModule, fsdp2_clip_grad_norm_
 from verl.utils.py_functional import append_to_dict
@@ -397,6 +397,21 @@ class DataParallelPPOActor(BasePPOActor):
                             cliprange_low=clip_ratio_low,
                             cliprange_high=clip_ratio_high,
                             loss_agg_mode=loss_agg_mode,
+                        )
+                    
+                    elif loss_mode == "clip_cov":
+                        pg_loss, pg_clipfrac, ppo_kl= compute_policy_loss_clip_cov(
+                            old_log_prob=old_log_prob,
+                            log_prob=log_prob,
+                            advantages=advantages,
+                            response_mask=response_mask,
+                            cliprange=clip_ratio,
+                            cliprange_low=clip_ratio_low,
+                            cliprange_high=clip_ratio_high,
+                            loss_agg_mode=loss_agg_mode,
+                            clip_ratio=self.config.clip_cov_ratio,
+                            clip_cov_lb=self.config.clip_cov_lb,
+                            clip_cov_ub=self.config.clip_cov_ub,
                         )
 
                     elif loss_mode == "kl_cov":

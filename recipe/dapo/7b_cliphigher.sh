@@ -25,7 +25,6 @@ overlong_penalty_factor=1.0
 
 loss_agg_mode="token-mean"
 loss_mode="vanilla"
-loss_factor=0.01
 enable_filter_groups=False
 filter_groups_metric=acc
 max_num_gen_batches=10
@@ -76,7 +75,6 @@ HYDRA_FULL_ERROR=1 python -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
     actor_rollout_ref.actor.clip_ratio_c=10.0 \
     actor_rollout_ref.actor.loss_mode=${loss_mode} \
-    actor_rollout_ref.actor.loss_factor=${loss_factor} \
     actor_rollout_ref.actor.k_percent=${k_percent} \
     actor_rollout_ref.actor.ppo_kl_coef=${ppo_kl_coef} \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=8 \
