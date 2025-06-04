@@ -69,7 +69,7 @@ def run_ppo(config) -> None:
     if not ray.is_initialized():
         # this is for local ray cluster
         ray.init(
-            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN", "WANDB_API_KEY": YOUR_WANDB_API_KEY}},
+            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN", "WANDB_API_KEY": os.environ.get("WANDB_API_KEY", "")}},
             num_cpus=config.ray_init.num_cpus,
         )
 

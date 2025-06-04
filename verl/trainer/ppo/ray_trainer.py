@@ -583,10 +583,10 @@ class RayPPOTrainer:
                 else:
                     raise TypeError(f"Unsupported data type: {type(data)}")
 
-            data16 = {k: index_select_batch(v, math_indices) for k, v in test_data.items()}
+            data32 = {k: index_select_batch(v, math_indices) for k, v in test_data.items()}
             data1 = {k: index_select_batch(v, non_math_indices) for k, v in test_data.items()}
 
-            test_batch16 = DataProto.from_single_dict(data16)
+            test_batch32 = DataProto.from_single_dict(data32)
             test_batch1 = DataProto.from_single_dict(data1)
 
             def get_output(test_batch, is_sample=False, temperature=0.6):
@@ -646,10 +646,16 @@ class RayPPOTrainer:
                 test_batch = test_batch.union(test_output_gen_batch)
                 return test_batch
             
-            test_batch16 = get_output(test_batch16, is_sample=True, temperature=0.6)
-            test_batch1 = get_output(test_batch1, is_sample=False)
-            
-            test_batch = DataProto.concat([test_batch16, test_batch1])
+            if len(test_batch32)==0:
+                test_batch = get_output(test_batch1, is_sample=False)
+            elif len(test_batch1)==0:
+                test_batch = get_output(test_batch32, is_sample=False)
+            elif len(test_batch32) > 0 and len(test_batch1) > 0:
+                test_batch32 = get_output(test_batch32, is_sample=True, temperature=0.6)
+                test_batch1 = get_output(test_batch1, is_sample=False)
+                test_batch = DataProto.concat([test_batch32, test_batch1])
+            else:
+                raise ValueError(f"Both test_batch32 and test_batch1 are empty: {len(test_batch32)=}, {len(test_batch1)=}")
 
             # todo: add compute entropy
             test_batch_padded, pad_size = pad_dataproto_to_divisor(test_batch, self.actor_rollout_wg.world_size)
