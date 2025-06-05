@@ -26,6 +26,7 @@
 # 🎉News
 
 - **[2025/06/04]** Sent a PR to verl, one can use our approaches in verl with PR [#1830](https://github.com/volcengine/verl/pull/1830).
+- **[2025/06/03]** 🎉 Ranked **#3** of the week on [Huggingface Weekly Papers](https://huggingface.co/papers/week/2025-W22).
 - **[2025/05/29]** 🎉 Ranked **#1** of the day on [Huggingface Daily Papers](https://huggingface.co/papers?date=2025-05-29).
 - **[2025/05/29]** Released our Paper on arXiv. See [here](https://arxiv.org/pdf/2505.22617). We provide insights into the entropy mechanism of RL for LLMs and propose two simple yet effective strategies to alleviate the entropy collapse. 
 
