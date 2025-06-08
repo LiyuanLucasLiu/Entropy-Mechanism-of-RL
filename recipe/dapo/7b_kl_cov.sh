@@ -25,12 +25,12 @@ overlong_penalty_factor=1.0
 
 loss_agg_mode="token-mean"
 loss_mode="kl_cov"
-enable_filter_groups=False
+enable_filter_groups=True
 filter_groups_metric=acc
 max_num_gen_batches=10
 train_prompt_bsz=256
 gen_prompt_bsz=$((train_prompt_bsz * 3))
-train_prompt_mini_bsz=256
+train_prompt_mini_bsz=32
 n_resp_per_prompt=8
 max_token=30720
 
