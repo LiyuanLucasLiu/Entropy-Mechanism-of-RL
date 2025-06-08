@@ -136,6 +136,6 @@ HYDRA_FULL_ERROR=1 python -m recipe.dapo.main_dapo \
     trainer.val_before_train=False \
     trainer.test_freq=4 \
     trainer.save_freq=32 \
-    trainer.total_epochs=1000 \
+    trainer.total_epochs=15 \
     trainer.default_local_dir="${CKPTS_DIR}" \
     trainer.resume_mode=disable
