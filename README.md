@@ -45,7 +45,7 @@ conda env create -n entropy -f environment.yaml
 
 Before training, you need to ensure that the AIME, AIME25 and AMC datasets are with "data_source" of "aime", "aime25" and "amc" respectively. As we hardcode it to make sure they are rollouted with temperature of 0.6.
 
-Note: For any training set, please modify the system prompt and specify the answer in the format of \boxed{}, as we need to extract the answer based on \boxed{} for verification.
+Note: For any training set, please modify the system prompt and specify the answer in the format of `\boxed{}`, as we need to extract the answer based on `\boxed{}` for verification.
 
 For training Qwen2.5-7B on a single node, taking the KL-Cov approach as an example, you can simply run:
 
