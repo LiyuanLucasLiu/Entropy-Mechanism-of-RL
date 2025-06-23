@@ -35,7 +35,7 @@
 
 This repo is forked from the latest [verl](https://github.com/volcengine/verl). We build our code on the [dapo recipe](https://github.com/PRIME-RL/Entropy-Mechanism-of-RL/tree/main/recipe/dapo).
 
-Note: For any training and test set, please modify the system prompt and specify the answer in the format of `\boxed{}`, as we need to extract the answer based on `\boxed{}` for verification.
+**Note:** For any training and test set, please modify the system prompt and specify the answer in the format of `\boxed{}`, as we need to extract the answer based on `\boxed{}` for verification.
 
 ## Installation
 You can install dependencies by running the following commands:
