@@ -33,19 +33,19 @@
 
 # ✨Getting started
 
-This repo is forked from the latest [verl](https://github.com/volcengine/verl). We build our code on the [dapo recipe](https://github.com/PRIME-RL/Entropy-Mechanism-of-RL/tree/main/recipe/dapo)
+This repo is forked from the latest [verl](https://github.com/volcengine/verl). We build our code on the [dapo recipe](https://github.com/PRIME-RL/Entropy-Mechanism-of-RL/tree/main/recipe/dapo).
+
+Note: For any training and test set, please modify the system prompt and specify the answer in the format of `\boxed{}`, as we need to extract the answer based on `\boxed{}` for verification.
 
 ## Installation
 You can install dependencies by running the following commands:
 ```
 conda env create -n entropy -f environment.yaml
-``` 
+```
 
 ## Training
 
 Before training, you need to ensure that the AIME, AIME25 and AMC datasets are with "data_source" of "aime", "aime25" and "amc" respectively. As we hardcode it to make sure they are rollouted with temperature of 0.6.
-
-Note: For any training set, please modify the system prompt and specify the answer in the format of `\boxed{}`, as we need to extract the answer based on `\boxed{}` for verification.
 
 For training Qwen2.5-7B on a single node, taking the KL-Cov approach as an example, you can simply run:
 
