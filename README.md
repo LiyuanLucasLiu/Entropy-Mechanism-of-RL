@@ -37,6 +37,8 @@ This repo is forked from the latest [verl](https://github.com/volcengine/verl). 
 
 **Note:** For any training and test set, please modify the system prompt and specify the answer in the format of `\boxed{}`, as we need to extract the answer based on `\boxed{}` for verification.
 
+Our training and evaluation data can be found [here](https://drive.google.com/drive/folders/1AhZ3yyfesVlz9dvIV0eR2LbiWz_XFHMX?usp=sharing).
+
 ## Installation
 You can install dependencies by running the following commands:
 ```
