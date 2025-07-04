@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-export WANDB_API_KEY=YOUR_WANDB_API_KEY
+ID=${1:-"flash-bf16-tp2"}
+
 # export VLLM_USE_V1=1
 
 project_name='Qwen2.5-32B'
-exp_name='klcov'
+exp_name=${ID}
 
 adv_estimator=grpo
 
@@ -37,14 +38,16 @@ max_token=20480
 # Ray
 RAY_ADDRESS=${RAY_ADDRESS:-"http://localhost:8265"}
 WORKING_DIR=${WORKING_DIR:-"${PWD}"}
-RUNTIME_ENV=${RUNTIME_ENV:-"${WORKING_DIR}/verl/trainer/runtime_env.yaml"}
+echo "WORKING_DIR: ${WORKING_DIR}"
+RUNTIME_ENV=${RUNTIME_ENV:-"${WORKING_DIR}/verl/trainer/runtime_env_bf16.yaml"}
 NNODES=${NNODES:-4}
+
 # Paths
-RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
-MODEL_PATH=${MODEL_PATH:-"/YOUR_MODELPATH"}
-CKPTS_DIR=${CKPTS_DIR:-"/YOUR_CKPTS_PATH"}
-TRAIN_FILE=${TRAIN_FILE:-"/YOUR_TRAIN_FILE_PATH"}
-TEST_FILE=${TEST_FILE:-["/YOUR_TRAIN_FILE_PATH"]}
+RAY_DATA_HOME=/mnt/ddn/alta03/lucliu/emrl
+MODEL_PATH=${MODEL_PATH:-"/root/Qwen2.5-32B"}
+CKPTS_DIR=${CKPTS_DIR:-"/root/ckpts/${project_name}/${exp_name}"}
+TRAIN_FILE=${TRAIN_FILE:-"${RAY_DATA_HOME}/data/dapo-math-modified.parquet"}
+TEST_FILE=${TEST_FILE:-["${RAY_DATA_HOME}/data/omni-math.parquet", "${RAY_DATA_HOME}/data/others.parquet"]}
 
 # Algorithm
 temperature=1.0
@@ -59,7 +62,10 @@ infer_micro_batch_size=null
 train_micro_batch_size=null
 offload=False
 
-HYDRA_FULL_ERROR=1 python -m recipe.dapo.main_dapo \
+ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
+    --working-dir "${WORKING_DIR}" \
+    --submission-id ${ID} \
+    -- python -m recipe.dapo.main_dapo \
     data.train_files="${TRAIN_FILE}" \
     data.val_files="${TEST_FILE}" \
     data.prompt_key=prompt \
