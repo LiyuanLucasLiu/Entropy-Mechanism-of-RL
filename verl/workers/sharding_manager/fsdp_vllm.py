@@ -68,6 +68,8 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         self.model_config = model_config
         self.device_mesh = device_mesh
         self.offload_param = offload_param
+        self.step = 0
+        self.downcast = int(os.environ.get('FLASHRL_DOWNCAST', '4'))
 
         # Full params
         self.full_params = full_params
@@ -79,6 +81,8 @@ class FSDPVLLMShardingManager(BaseShardingManager):
                 state_dict_type=StateDictType.SHARDED_STATE_DICT,
                 state_dict_config=ShardedStateDictConfig(),
             )
+
+        # FSDP.set_state_dict_type(self.module, StateDictType.FULL_STATE_DICT, FullStateDictConfig(offload_to_cpu=True))
 
         self.tp_size = self.device_mesh["infer_tp"].size()
         self.tp_rank = self.device_mesh["infer_tp"].get_local_rank()
@@ -130,6 +134,13 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             self.update_params(params)
             log_gpu_memory_usage("After sync model weights in sharding manager", logger=logger)
             del params
+           
+            if self.step % self.downcast == 0:
+                logger.error("convert back called, with hacked_converted_back length of %d", len(self.model_runner.model.hacked_converted_back))
+                with FSDP.state_dict_type(self.module, StateDictType.FULL_STATE_DICT, FullStateDictConfig(offload_to_cpu=True, rank0_only=True)):
+                    self.module.load_state_dict(self.model_runner.model.hacked_converted_back, strict=False) 
+            self.step += 1           
+
             if self.offload_param:
                 offload_fsdp_model_to_cpu(self.module)
             torch.cuda.empty_cache()
