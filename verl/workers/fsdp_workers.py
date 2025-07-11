@@ -599,7 +599,8 @@ class ActorRolloutRefWorker(Worker):
         if self._is_offload_optimizer:
             offload_fsdp_optimizer(optimizer=self.actor_optimizer)
             log_gpu_memory_usage("After offload actor optimizer during update_actor", logger=logger)
-
+        
+        self.rollout_sharding_manager.flag()
         return output
     
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)

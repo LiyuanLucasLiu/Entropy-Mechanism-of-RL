@@ -38,6 +38,9 @@ from verl.utils.vllm_utils import patch_vllm_moe_model_weight_loader
 
 from .base import BaseShardingManager
 
+from flash_rl.flash_quantization import fp8_quantize_tensor, fp8_quantize_channel
+UPDATE_FREQ=int(os.getenv("FLASHRL_DOWNCAST", "16"))
+
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
@@ -69,6 +72,9 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         self.device_mesh = device_mesh
         self.offload_param = offload_param
 
+        self.step = 1
+        self.updated = True
+
         # Full params
         self.full_params = full_params
         if full_params and fsdp_version(self.module) == 1:
@@ -93,6 +99,10 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             torch.cuda.set_rng_state(self.torch_random_states)
         else:
             self.gen_random_states = None
+
+    def flag(self):
+        print(f'convert back flag: {self.updated}')
+        self.updated = True
 
     @GPUMemoryLogger(role="fsdp vllm sharding_manager", logger=logger)
     def __enter__(self):
@@ -121,6 +131,19 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             log_gpu_memory_usage("After sync model weights in sharding manager", logger=logger)
             del params
         else:
+            if self.step % UPDATE_FREQ == 0:
+                self.hacked_converted_back = {}
+                profile = self.inference_engine.flash_rl_profile
+                device = torch.cuda.current_device() 
+                for name, tensor in params.items():
+                    tensor = tensor.to(device, non_blocking=True).full_tensor() if isinstance(tensor, DTensor) else tensor
+                    if name in profile:
+                        # weight, scale = fp8_quantize_tensor(name, tensor, profile)
+                        self.hacked_converted_back[name] = tensor.to(device='cpu') # weight[1].to(dtype=tensor.dtype, device="cpu") * scale[1].to(dtype=tensor.dtype, device="cpu")
+                params = self.module.state_dict()
+            else:
+                logger.error(f"convert back not called at step: {self.step}, freq: {UPDATE_FREQ}")
+
             if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
                 self.inference_engine.wake_up(tags=["weights"])
             else:
@@ -129,6 +152,7 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             # update model params
             self.update_params(params)
             log_gpu_memory_usage("After sync model weights in sharding manager", logger=logger)
+
             del params
             if self.offload_param:
                 offload_fsdp_model_to_cpu(self.module)
@@ -156,6 +180,15 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             self.inference_engine.sleep(level=1)
 
         self.module.train()
+
+        if self.step % UPDATE_FREQ == 0:
+            with FSDP.state_dict_type(self.module, StateDictType.FULL_STATE_DICT, FullStateDictConfig()):
+                logger.error(f"convert back called at step {self.step} per {UPDATE_FREQ}, with hacked_converted_back length of {len(self.hacked_converted_back)}")
+                self.module.load_state_dict(self.hacked_converted_back, strict=False)
+
+        if self.updated:
+            self.step += 1
+            self.updated = False
 
         # add empty cache after each compute
         torch.cuda.empty_cache()
