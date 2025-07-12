@@ -55,6 +55,8 @@ from verl.utils.import_utils import import_external_libs
 from verl.utils.model import compute_position_id_with_mask
 from verl.workers.sharding_manager.fsdp_ulysses import FSDPUlyssesShardingManager
 
+from flash_rl.transformer_patch import replace_linear_with_fp8cast
+
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
@@ -222,6 +224,8 @@ class ActorRolloutRefWorker(Worker):
 
                 _apply_liger_kernel_to_instance(model=actor_module)
 
+            replace_linear_with_fp8cast(actor_module)
+            
             apply_monkey_patch(
                 model=actor_module,
                 use_remove_padding=use_remove_padding,

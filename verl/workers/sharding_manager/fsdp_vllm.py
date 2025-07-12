@@ -121,6 +121,16 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             log_gpu_memory_usage("After sync model weights in sharding manager", logger=logger)
             del params
         else:
+            self.hacked_converted_back = {}
+            profile = self.inference_engine.flash_rl_profile
+            device = torch.cuda.current_device() 
+            for name, tensor in params.items():
+                tensor = tensor.to(device, non_blocking=True).full_tensor() if isinstance(tensor, DTensor) else tensor
+                if name in profile:
+                    weight, scale = fp8_quantize_tensor(name, tensor, profile)
+                    self.hacked_converted_back[scale[0]] = scale[1][0]
+            params = self.module.state_dict()
+                
             if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
                 self.inference_engine.wake_up(tags=["weights"])
             else:
@@ -156,7 +166,11 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             self.inference_engine.sleep(level=1)
 
         self.module.train()
-
+        
+        with FSDP.state_dict_type(self.module, StateDictType.FULL_STATE_DICT, FullStateDictConfig()):
+            logger.error(f"weight scale loading called, with hacked_converted_back length of {len(self.hacked_converted_back)}")
+            self.module.load_state_dict(self.hacked_converted_back, strict=False)
+                
         # add empty cache after each compute
         torch.cuda.empty_cache()
 
