@@ -224,7 +224,7 @@ class ActorRolloutRefWorker(Worker):
 
                 _apply_liger_kernel_to_instance(model=actor_module)
 
-            replace_linear_with_fp8cast(actor_module)
+            replace_linear_with_fp8cast(actor_module, root=True)
             
             apply_monkey_patch(
                 model=actor_module,

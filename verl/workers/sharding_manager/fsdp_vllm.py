@@ -36,6 +36,7 @@ from verl.utils.fsdp_utils import fsdp_version, load_fsdp_model_to_gpu, offload_
 from verl.utils.torch_functional import check_cuda_is_available
 from verl.utils.vllm_utils import patch_vllm_moe_model_weight_loader
 
+from flash_rl.flash_quantization import fp8_quantize_tensor, fp8_quantize_channel
 from .base import BaseShardingManager
 
 logger = logging.getLogger(__file__)
@@ -123,7 +124,7 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         else:
             self.hacked_converted_back = {}
             profile = self.inference_engine.flash_rl_profile
-            device = torch.cuda.current_device() 
+            device = torch.cuda.current_device()
             for name, tensor in params.items():
                 tensor = tensor.to(device, non_blocking=True).full_tensor() if isinstance(tensor, DTensor) else tensor
                 if name in profile:
@@ -167,10 +168,20 @@ class FSDPVLLMShardingManager(BaseShardingManager):
 
         self.module.train()
         
-        with FSDP.state_dict_type(self.module, StateDictType.FULL_STATE_DICT, FullStateDictConfig()):
-            logger.error(f"weight scale loading called, with hacked_converted_back length of {len(self.hacked_converted_back)}")
-            self.module.load_state_dict(self.hacked_converted_back, strict=False)
-                
+        # with FSDP.state_dict_type(self.module, StateDictType.FULL_STATE_DICT, FullStateDictConfig()):
+        #     logger.error(f"weight scale loading called, with hacked_converted_back length of {len(self.hacked_converted_back)}")
+        #     self.module.load_state_dict(self.hacked_converted_back, strict=False)
+        converted_name, skipped_name = [], []
+        with torch.no_grad():
+            for name, module in self.module._fsdp_wrapped_module.named_modules():
+                name = name.replace('_fsdp_wrapped_module.', '') + '.weight_scale'
+                if name in self.hacked_converted_back:
+                    module.weight_scale = self.hacked_converted_back[name].item()
+                    converted_name.append(name)
+                else:
+                    skipped_name.append(name)
+        logger.debug(f"convert back hack skipped: {skipped_name}")
+        logger.debug(f"convert back hack succeeded on: {converted_name}")
         # add empty cache after each compute
         torch.cuda.empty_cache()
 
@@ -209,5 +220,5 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         model = self.model_runner.model
         patch_vllm_moe_model_weight_loader(model)
         device = torch.cuda.current_device()  # used when fsdp2 set cpu_offload_policy
-        loaded_params = model.load_weights(((name, param.to(device, non_blocking=True).full_tensor() if isinstance(param, DTensor) else param) for name, param in updated_params.items()))
+        loaded_params = model.load_weights(((name, param.to(device, non_blocking=True).full_tensor() if isinstance(param, DTensor) else param) for name, param in updated_params.items() if '_scale' not in name))
         logger.info("vLLM load weights, loaded_params: %d", len(loaded_params))
