@@ -274,11 +274,16 @@ class vLLMRollout(BaseRollout):
             # if n = 1: (bs, response_length) ; if n > 1: (bs * n, response_length)
 
             response = []
+            rollout_log_probs = []
             for output in outputs:
                 for sample_id in range(len(output.outputs)):
                     response.append(output.outputs[sample_id].token_ids)
+                    rollout_log_probs.append(
+                        [next(iter(d_i.values())).logprob for d_i in output.outputs[sample_id].logprobs]
+                    )
 
             response = pad_2d_list_to_length(response, self.pad_token_id, max_length=self.config.response_length).to(idx.device)
+            rollout_log_probs = pad_2d_list_to_length(rollout_log_probs, 1.0, max_length=self.config.response_length).to(idx.device)
 
             if self.sampling_params.n > 1 and do_sample:
                 idx = _repeat_interleave(idx, self.sampling_params.n)
@@ -314,6 +319,7 @@ class vLLMRollout(BaseRollout):
                 "prompts": idx,
                 "responses": response,
                 "input_ids": seq,  # here input_ids become the whole sentences
+                "rollout_log_probs": rollout_log_probs,  # we will recompute old log prob with actor
                 # 'old_log_probs': log_probs, # we will recompute old log prob with actor
                 "attention_mask": attention_mask,
                 "position_ids": position_ids,

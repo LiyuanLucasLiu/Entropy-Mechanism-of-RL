@@ -296,7 +296,40 @@ class RayDAPOTrainer(RayPPOTrainer):
                     with _timer("old_log_prob", timing_raw):
                         old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
                         batch = batch.union(old_log_prob)
+                        
+                        with torch.no_grad():
+                            log_prob_mask = torch.logical_not(batch.batch['rollout_log_probs'] == 1.)
+                            log_prob_diff = batch.batch['rollout_log_probs'][log_prob_mask].float() - batch.batch['old_log_probs'][log_prob_mask].float()
+                            vllm_kl = log_prob_diff.sum() / log_prob_mask.float().sum()
 
+                            ratio = torch.exp(- log_prob_diff)
+                            adjsuted_log_prob_diff = log_prob_diff * ratio                    
+                            new_top_p = np.exp(adjsuted_log_prob_diff.sum() / log_prob_mask.float().sum())
+
+                            rollout_old_log_probs = batch.batch["rollout_log_probs"]
+                            actor_old_log_probs = batch.batch["old_log_probs"]
+                            attention_mask = batch.batch["attention_mask"]
+                            responses = batch.batch["responses"]
+                            response_length = responses.size(1)
+                            response_mask = attention_mask[:, -response_length:]
+
+                            rollout_probs = torch.exp(rollout_old_log_probs)
+                            actor_probs = torch.exp(actor_old_log_probs)
+                            rollout_probs_diff = torch.abs(rollout_probs - actor_probs)
+                            rollout_probs_diff = torch.masked_select(rollout_probs_diff, response_mask.bool())
+                            rollout_probs_diff_max = torch.max(rollout_probs_diff)
+                            rollout_probs_diff_mean = torch.mean(rollout_probs_diff)
+                            rollout_probs_diff_std = torch.std(rollout_probs_diff)
+                            metrics.update(
+                                {
+                                    "training/rollout_probs_diff_max": rollout_probs_diff_max.detach().item(),
+                                    "training/rollout_probs_diff_mean": rollout_probs_diff_mean.detach().item(),
+                                    "training/rollout_probs_diff_std": rollout_probs_diff_std.detach().item(),
+                                    "training/vllm_kl": vllm_kl,
+                                    "training/new_top_p": new_top_p,
+                                }
+                            )
+                            
                     if self.use_reference_policy:
                         # compute reference log_prob
                         with _timer("ref", timing_raw):
