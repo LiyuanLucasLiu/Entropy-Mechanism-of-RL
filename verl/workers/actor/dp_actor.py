@@ -29,7 +29,7 @@ from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
 import verl.utils.torch_functional as verl_F
 from verl import DataProto
-from verl.trainer.ppo.core_algos import agg_loss, compute_policy_loss, kl_penalty, compute_policy_loss_kl_cov, compute_policy_loss_clip_cov
+from verl.trainer.ppo.core_algos import agg_loss, compute_policy_loss, kl_penalty, compute_policy_loss_kl_cov, compute_policy_loss_clip_cov, compute_policy_loss_kl_cov_async
 from verl.utils.debug import GPUMemoryLogger
 from verl.utils.fsdp_utils import FSDPModule, fsdp2_clip_grad_norm_
 from verl.utils.py_functional import append_to_dict
@@ -320,7 +320,7 @@ class DataParallelPPOActor(BasePPOActor):
         temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
         multi_turn = data.meta_info.get("multi_turn", False)
 
-        select_keys = ["responses", "input_ids", "attention_mask", "position_ids", "old_log_probs", "advantages"]
+        select_keys = ["responses", "input_ids", "attention_mask", "position_ids", "old_log_probs", "advantages", "rollout_log_probs"]
         if multi_turn:
             select_keys.append("loss_mask")
         if self.config.use_kl_loss:
@@ -369,7 +369,8 @@ class DataParallelPPOActor(BasePPOActor):
                         response_mask = data["loss_mask"][:, -response_length:]
                     else:
                         response_mask = attention_mask[:, -response_length:]
-
+                    
+                    rollout_log_probs = data["rollout_log_probs"]
                     old_log_prob = data["old_log_probs"]
                     advantages = data["advantages"]
 
@@ -424,6 +425,20 @@ class DataParallelPPOActor(BasePPOActor):
                             k_percent=self.config.k_percent,
                             ppo_kl_coef=self.config.ppo_kl_coef,
                         )
+                        
+                    elif loss_mode == "kl_cov_async":
+                        pg_loss, pg_clipfrac, ppo_kl= compute_policy_loss_kl_cov_async(
+                            rollout_log_probs=rollout_log_probs,
+                            old_log_prob=old_log_prob,
+                            log_prob=log_prob,
+                            advantages=advantages,
+                            response_mask=response_mask,
+                            loss_agg_mode=loss_agg_mode,
+                            k_percent=self.config.k_percent,
+                            ppo_kl_coef=self.config.ppo_kl_coef,
+                            behav_imp_weight_cap=self.config.behav_imp_weight_cap,  # used for async ppo
+                        )
+
 
                     else:
                         raise ValueError(f"Unsupported loss mode: {self.config.loss_mode}")

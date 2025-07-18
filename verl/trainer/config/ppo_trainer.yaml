@@ -48,6 +48,7 @@ actor_rollout_ref:
     clip_ratio_c: 3.0 # lower bound of the value for Dual-clip PPO from https://arxiv.org/pdf/1912.09729
     loss_agg_mode: "token-mean" # / "seq-mean-token-sum" / "seq-mean-token-mean"
     loss_mode: "vanilla"
+    behav_imp_weight_cap: 5 # used for async ppo, default is 5
     k_percent: 0.2
     ppo_kl_coef: 1
     clip_cov_ratio: 0.0002

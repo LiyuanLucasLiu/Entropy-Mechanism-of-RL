@@ -466,6 +466,65 @@ def compute_policy_loss_kl_cov(
 
     return pg_loss, torch.tensor(0.), ppo_kl_abs
 
+def compute_policy_loss_kl_cov_async(
+    rollout_log_probs,
+    old_log_prob,
+    log_prob,
+    advantages,
+    response_mask,
+    loss_agg_mode="token-mean",
+    k_percent=0.2,
+    ppo_kl_coef=1,
+    behav_imp_weight_cap=None,
+):
+    behav_kl = old_log_probs - rollout_log_probs
+
+    behav_imp_weight = behav_kl.exp()
+    loss_mask = torch.ones_like(log_prob, dtype=torch.bool)
+    
+    if behav_imp_weight_cap is not None:
+        behav_mask = (behav_imp_weight <= behav_imp_weight_cap).logical_and(
+            loss_mask
+        )
+    else:
+        behav_mask = loss_mask
+    behav_imp_weight = torch.where(behav_mask, behav_imp_weight, 0.0)
+        
+    negative_approx_kl = log_prob - old_log_prob
+
+    abs_kl = negative_approx_kl.abs()
+
+    ratio = torch.exp(negative_approx_kl)
+
+    ppo_kl_abs = verl_F.masked_mean(negative_approx_kl.abs(), response_mask)
+
+    pg_losses1 = -advantages * ratio
+
+    pg_losses_kl = - advantages * ratio + ppo_kl_coef * abs_kl
+
+    pg_losses = pg_losses1
+
+    all_valid = (response_mask > 0)
+    all_valid_idx = torch.nonzero(all_valid.reshape(-1), as_tuple=True)[0] 
+    all_valid_adv = advantages[all_valid].detach().reshape(-1).cpu()
+    all_valid_logp = log_prob[all_valid].detach().reshape(-1).cpu()
+
+    k = min(k_percent, len(all_valid_adv))
+
+    if k != 0:
+        cov_lst_all = (all_valid_adv - all_valid_adv.mean()) * (all_valid_logp - all_valid_logp.mean())
+        k_percent_nums = max(1, int(len(cov_lst_all) * k / 100))
+        large_cov_idxs = torch.topk(cov_lst_all, k_percent_nums, largest=True).indices
+        
+        if len(large_cov_idxs) != 0:
+            large_cov_idxs = all_valid_idx[large_cov_idxs]
+            pg_losses[large_cov_idxs // advantages.shape[1], large_cov_idxs % advantages.shape[1]] = pg_losses_kl[large_cov_idxs // advantages.shape[1], large_cov_idxs % advantages.shape[1]]
+
+    pg_loss = pg_loss * behav_imp_weight
+    pg_loss = agg_loss(loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+
+    return pg_loss, torch.tensor(0.), ppo_kl_abs
+
 def compute_policy_loss_clip_cov(
     old_log_prob,
     log_prob,
